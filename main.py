@@ -17,7 +17,7 @@ def fetch_issues(issues_url):
 
     soup = BeautifulSoup(response.text, 'html.parser')
     issue_details = {}
-
+    
     # Ensure Camel is the first header (for easy reference)
     issue_details['Camel Project ID'] = issue_url.split('-')[-1]  
     print(f"camel issue_url {issue_url.split('-')[-1] }")
@@ -37,9 +37,11 @@ def fetch_issues(issues_url):
     print(f"Reporter {reporter.text.strip()}")
 
     # Extract Affected Versions
-    affected_versions = soup.find('span', {'id': 'versions-val'})
-    issue_details['Affected Versions'] = affected_versions.text.strip() if affected_versions else 'None'
-    print(f"Affected versions {affected_versions.text.strip()}")
+    affected_versions_element = soup.find('span', {'id': 'versions-val'})
+    affected_versions_split = affected_versions_element.text.split()
+    affected_versions = "".join(affected_versions_split)
+    issue_details['Affected Versions'] = affected_versions if affected_versions else 'None'
+    print(f"Affected versions {affected_versions}")
 
     # Extract Fix Versions
     fix_versions_element = soup.find('span', {'id': 'fixfor-val'})
@@ -65,11 +67,19 @@ def fetch_issues(issues_url):
      # Extract Description (Focusing on the <p> tag inside "user-content-block")
     desc_element = soup.find('div', {'id': 'description-val'})
     user_content = desc_element.find('div', {'class': 'user-content-block'}) if desc_element else None
-    p_tag = user_content.find('p') if user_content else None
-    description = p_tag.text.strip()
-    issue_details['Description'] = description if description else 'No description available'
-    print(f"Desc {description}")
 
+    if user_content:
+        p_tags = user_content.find_all('p')  
+        description = "\n".join(p.text.strip() for p in p_tags if p.text.strip())  
+    else:
+        description = "No description available"
+
+    issue_details['Description'] = description
+    print(f"Description: {description}")
+
+
+    # Extract Comments
+    issue_details['Comments'] = extract_comments(soup)
     return issue_details
 
 
@@ -106,31 +116,44 @@ def extract_date(soup, element_id):
 
 def extract_comments(soup):
     comments = []
-    comment_elements = soup.find_all('div', {'class': 'activity-comment'})
+
+    comment_container = soup.find('div', class_='issuePanelWrapper')
+    if not comment_container:
+        print("No comment container found!")
+        return "No comments found"
+
+    print(comment_container.prettify())
+
+    comment_elements = comment_container.find_all('div', class_='issue-data-block activity-comment twixi-block expanded')
+    if not comment_elements:
+        print("No comment elements found inside issuePanelWrapper")
+        return "No comments found"
+
+    print(f"Found {len(comment_elements)} comments.")
 
     for comment in comment_elements:
-        #author = comment.find('a', {'class': 'user-hover'})
-        #timestamp_element = comment.find('time')
-        comment_text = comment.find('div', {'class': 'action-body'})
+        
+        action_details_element = comment.find('div', class_='action-details flooded')
+        action_details = action_details_element.get_text(strip=True) if action_details_element else 'No action details'
 
-        #author_text = author.text.strip() if author else 'Unknown'
-        #timestamp = timestamp_element['datetime'] if timestamp_element and 'datetime' in timestamp_element.attrs else ''
-        comment_text = comment_text.text.strip() if comment_text else ''
-        '''
-        try:
-            timestamp_epoch = int(datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S%z").timestamp()) if timestamp else ''
-        except ValueError:
-            timestamp_epoch = ''
-        '''
-        #comments.append(f"{author_text}:{timestamp_epoch}:{timestamp}:{comment_text}")
-        comments.append(f"{comment_text}")
+        comment_text_element = comment.find('div', class_='action-body')
+        comment_text = comment_text_element.get_text(strip=True) if comment_text_element else 'No comment text'
 
-    return ' | '.join(comments) if comments else 'No comments'
+        author_element = comment.find('a', class_='user-hover')
+        author = author_element.text.strip() if author_element else 'Unknown'
+
+        timestamp_element = comment.find('time')
+        timestamp = timestamp_element['datetime'] if timestamp_element and 'datetime' in timestamp_element.attrs else 'No timestamp'
+
+        comments.append(f"{action_details} | {author}: {timestamp}: {comment_text}")
+
+    return ' | '.join(comments) if comments else 'No comments found'
 
 if __name__ == "__main__":
-    issue_ids = input("Enter issue IDs (separated by commas): ").split(',')
+    issue_ids = [str(id) for id in list(range(20924, 20814, -1)) + [10597]]
+    #issue_ids = input("Enter issue IDs (separated by commas): ").split(',')
     for issue_id in issue_ids:
-        issue_id = issue_id.strip()  # Clean up any extra spaces
+        issue_id = issue_id.strip()  
         issue_url = get_full_url(issue_id)
         print(f"full issue url {issue_url}")
         issue_data = fetch_issues(issue_url)
