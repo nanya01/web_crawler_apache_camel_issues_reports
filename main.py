@@ -31,6 +31,12 @@ def fetch_issues(issues_url):
     print(f"Fix Versions {" ".join(fix_versions)}")
 
     
+     # Extract Description (Focusing on the <p> tag inside "user-content-block")
+    desc_element = soup.find('div', {'id': 'description-val'})
+    user_content = desc_element.find('div', {'class': 'user-content-block'}) if desc_element else None
+    p_tag = user_content.find('p') if user_content else None
+    description = p_tag.text.strip()
+    print(f"Desc {description}")
 
 if __name__ == "__main__":
     issue_url = "https://issues.apache.org/jira/browse/CAMEL-10597"
