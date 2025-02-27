@@ -104,6 +104,29 @@ def extract_date(soup, element_id):
     
     return date_str, epoch_time
 
+def extract_comments(soup):
+    comments = []
+    comment_elements = soup.find_all('div', {'class': 'activity-comment'})
+
+    for comment in comment_elements:
+        #author = comment.find('a', {'class': 'user-hover'})
+        #timestamp_element = comment.find('time')
+        comment_text = comment.find('div', {'class': 'action-body'})
+
+        #author_text = author.text.strip() if author else 'Unknown'
+        #timestamp = timestamp_element['datetime'] if timestamp_element and 'datetime' in timestamp_element.attrs else ''
+        comment_text = comment_text.text.strip() if comment_text else ''
+        '''
+        try:
+            timestamp_epoch = int(datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S%z").timestamp()) if timestamp else ''
+        except ValueError:
+            timestamp_epoch = ''
+        '''
+        #comments.append(f"{author_text}:{timestamp_epoch}:{timestamp}:{comment_text}")
+        comments.append(f"{comment_text}")
+
+    return ' | '.join(comments) if comments else 'No comments'
+
 if __name__ == "__main__":
     issue_ids = input("Enter issue IDs (separated by commas): ").split(',')
     for issue_id in issue_ids:
