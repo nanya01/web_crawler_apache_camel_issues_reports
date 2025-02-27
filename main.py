@@ -3,6 +3,12 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import csv
 
+
+def get_full_url(issue_id):
+    base_url = "https://issues.apache.org/jira/browse/CAMEL-"
+    return base_url + issue_id
+
+
 def fetch_issues(issues_url):
     response = requests.get(issues_url)
     if response.status_code != 200:
@@ -11,6 +17,10 @@ def fetch_issues(issues_url):
 
     soup = BeautifulSoup(response.text, 'html.parser')
     issue_details = {}
+
+    # Ensure Camel is the first header (for easy reference)
+    issue_details['Camel Project ID'] = issue_url.split('-')[-1]  
+    print(f"camel issue_url {issue_url.split('-')[-1] }")
     # Extract Type
     type = soup.find('span', {'id': 'type-val'})
     issue_details['Type'] = type.text.strip() if type else 'Unknown'
@@ -95,6 +105,12 @@ def extract_date(soup, element_id):
     return date_str, epoch_time
 
 if __name__ == "__main__":
-    issue_url = "https://issues.apache.org/jira/browse/CAMEL-10597"
-    issue_data = fetch_issues(issue_url)
-    save_to_csv(issue_data)
+    issue_ids = input("Enter issue IDs (separated by commas): ").split(',')
+    for issue_id in issue_ids:
+        issue_id = issue_id.strip()  # Clean up any extra spaces
+        issue_url = get_full_url(issue_id)
+        print(f"full issue url {issue_url}")
+        issue_data = fetch_issues(issue_url)
+        if issue_data:
+            save_to_csv(issue_data)
+            print(f"Data saved for {issue_id}")
