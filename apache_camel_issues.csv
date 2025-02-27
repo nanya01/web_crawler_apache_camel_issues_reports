@@ -1,0 +1,2 @@
+Type,Assignee,Reporter,Affected Versions,Fix Versions,Created Date,Created Epoch,Updated Date,Resolution Date,Description
+Bug,Claus Ibsen,Bob Paulin,2.18.0,"2.17.5,2.18.2,2.19.0",2016-12-14T14:42:08+0000,1481726528,2016-12-15T14:26:13+0000,2016-12-14T15:31:58+0000,Assume I have rest path
