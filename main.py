@@ -150,7 +150,7 @@ def extract_comments(soup):
     return ' | '.join(comments) if comments else 'No comments found'
 
 if __name__ == "__main__":
-    issue_ids = [str(id) for id in list(range(20924, 20814, -1)) + [10597]]
+    issue_ids = [str(id) for id in list(range(2184, 20814, -1)) + [10597]]
     #issue_ids = input("Enter issue IDs (separated by commas): ").split(',')
     for issue_id in issue_ids:
         issue_id = issue_id.strip()  
