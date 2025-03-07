@@ -48,20 +48,5 @@ CSV File: apache_camel_issues.csv
 
 ---
 
-## Challenges And Workarounds in Extracting Apache Camel Issues
 
-1️ Issue Extraction Failure
-
-Problem: Unable to successfully extract Apache Camel issues IDs directly from Jira.
-
-Workaround:
-- Identified that issue IDs generally follow a sequential pattern, with a few exceptions.
-- Dynamically generated issue IDs based on this pattern to populate camel-id, allowing for more efficient retrieval of issues.
-
-2️ Unable to Extract Comments
-
-Problem: Could not successfully retrieve comments associated with issues.
-
-Workaround:
-- No effective workaround was found.
 
