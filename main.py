@@ -2,7 +2,9 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import csv
-
+from selenium import webdriver
+from selenium.webdriver.common.by import By 
+import time
 
 def get_full_url(issue_id):
     base_url = "https://issues.apache.org/jira/browse/CAMEL-"
@@ -70,7 +72,7 @@ def fetch_issues(issues_url):
 
     if user_content:
         p_tags = user_content.find_all('p')  
-        description = "\n".join(p.text.strip() for p in p_tags if p.text.strip())  
+        description = "".join(p.text.strip() for p in p_tags if p.text.strip())  
     else:
         description = "No description available"
 
@@ -79,7 +81,7 @@ def fetch_issues(issues_url):
 
 
     # Extract Comments
-    issue_details['Comments'] = extract_comments(soup)
+    issue_details['Comments'] = extract_comments(issues_url)
     return issue_details
 
 
@@ -91,6 +93,9 @@ def save_to_csv(issue_data, filename="apache_camel_issues.csv"):
             file_exists = True
     except FileNotFoundError:
         pass
+    
+    if isinstance(issue_data['Comments'], list):
+        issue_data['Comments'] = repr(issue_data['Comments']) 
 
     with open(filename, mode='a', newline='', encoding='utf-8') as file:
         writer = csv.DictWriter(file, fieldnames=issue_data.keys())
@@ -114,49 +119,59 @@ def extract_date(soup, element_id):
     
     return date_str, epoch_time
 
-def extract_comments(soup):
-    comments = []
+def extract_comments(issues_url):
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless") 
+    driver = webdriver.Chrome(options=options)
 
-    comment_container = soup.find('div', class_='issuePanelWrapper')
-    if not comment_container:
-        print("No comment container found!")
-        return "No comments found"
+    try:
+        driver.get(issues_url)
+        time.sleep(5) 
 
-    print(comment_container.prettify())
+        comments = []
+        comment_elements = driver.find_elements(By.CLASS_NAME, "activity-comment")
 
-    comment_elements = comment_container.find_all('div', class_='issue-data-block activity-comment twixi-block expanded')
-    if not comment_elements:
-        print("No comment elements found inside issuePanelWrapper")
-        return "No comments found"
+        for comment in comment_elements:
+            try:
+                author = comment.find_element(By.CLASS_NAME, "user-hover").text.strip()
+            except:
+                author = "Unknown"
 
-    print(f"Found {len(comment_elements)} comments.")
+            try:
+                timestamp = comment.find_element(By.TAG_NAME, "time").get_attribute("datetime")
+            except:
+                timestamp = "No timestamp"
 
-    for comment in comment_elements:
+            try:
+                comment_text = comment.find_element(By.CLASS_NAME, "action-body").text.strip()
+            except:
+                comment_text = "No comment text"
+
+            comments.append(f"{author} - {timestamp} {comment_text}")
+
+        full_comments = repr(comments) if comments else "No comments found"
         
-        action_details_element = comment.find('div', class_='action-details flooded')
-        action_details = action_details_element.get_text(strip=True) if action_details_element else 'No action details'
+        print(f"Extracted Comments: {full_comments}")  
 
-        comment_text_element = comment.find('div', class_='action-body')
-        comment_text = comment_text_element.get_text(strip=True) if comment_text_element else 'No comment text'
+        return full_comments
 
-        author_element = comment.find('a', class_='user-hover')
-        author = author_element.text.strip() if author_element else 'Unknown'
+    except Exception as e:
+        print(f"Error extracting comments: {e}")
+        return "No comments found"
 
-        timestamp_element = comment.find('time')
-        timestamp = timestamp_element['datetime'] if timestamp_element and 'datetime' in timestamp_element.attrs else 'No timestamp'
-
-        comments.append(f"{action_details} | {author}: {timestamp}: {comment_text}")
-
-    return ' | '.join(comments) if comments else 'No comments found'
+    finally:
+        driver.quit()
 
 if __name__ == "__main__":
-    issue_ids = [str(id) for id in list(range(2184, 20814, -1)) + [10597]]
+    issue_ids = [str(id) for id in list(range(21847, 20814, -1)) + [10597]] 
     #issue_ids = input("Enter issue IDs (separated by commas): ").split(',')
     for issue_id in issue_ids:
         issue_id = issue_id.strip()  
         issue_url = get_full_url(issue_id)
         print(f"full issue url {issue_url}")
         issue_data = fetch_issues(issue_url)
+        #print(f"issue data {issue_data}")
         if issue_data:
             save_to_csv(issue_data)
             print(f"Data saved for {issue_id}")
+          
